@@ -1,0 +1,43 @@
+name: Build y Release Portable
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar portable .exe
+        run: npm run electron:portable
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Crear Release en GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          name: FotoCarnet ${{ github.ref_name }}
+          body: |
+            ## FotoCarnet ${{ github.ref_name }}
+
+            ### Instalación
+            Descarga el archivo `.exe` y ejecútalo directamente — no requiere instalación.
+
+            > Si Windows muestra una advertencia, haz clic en **"Más información" → "Ejecutar de todas formas"**
+          files: dist-electron/FotoCarnet-Portable-*.exe
+          draft: false
+          prerelease: false

@@ -3,6 +3,40 @@ const fs = require('fs');
 const https = require('https');
 const { app, BrowserWindow, Menu, shell, ipcMain } = require('electron');
 
+const CURRENT_VERSION = app.getVersion();
+const UPDATE_CHECK_URL = 'https://api.github.com/repos/leo10m2010/foto-carnet/releases/latest';
+
+function checkForUpdates(win) {
+  const req = https.request(UPDATE_CHECK_URL, {
+    headers: { 'User-Agent': 'FotoCarnet-Updater', 'Accept': 'application/vnd.github+json' }
+  }, (res) => {
+    let data = '';
+    res.on('data', chunk => { data += chunk; });
+    res.on('end', () => {
+      try {
+        const release = JSON.parse(data);
+        const latest = (release.tag_name || '').replace(/^v/, '');
+        if (latest && latest !== CURRENT_VERSION && isNewer(latest, CURRENT_VERSION)) {
+          win.webContents.send('update-available', { version: latest, url: release.html_url });
+        }
+      } catch (_) {}
+    });
+  });
+  req.on('error', () => {});
+  req.setTimeout(8000, () => req.destroy());
+  req.end();
+}
+
+function isNewer(a, b) {
+  const pa = a.split('.').map(Number);
+  const pb = b.split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((pa[i] || 0) > (pb[i] || 0)) return true;
+    if ((pa[i] || 0) < (pb[i] || 0)) return false;
+  }
+  return false;
+}
+
 function createMainWindow() {
   const win = new BrowserWindow({
     width: 1500,
@@ -32,6 +66,11 @@ function createMainWindow() {
   });
 
   win.loadFile(path.join(__dirname, '..', 'index.html'));
+
+  // Check for updates 5 seconds after launch (non-blocking)
+  win.webContents.once('did-finish-load', () => {
+    setTimeout(() => checkForUpdates(win), 5000);
+  });
 }
 
 // RENIEC/apisperu.com API query — runs in main process to avoid renderer CORS restrictions

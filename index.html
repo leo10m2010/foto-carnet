@@ -447,6 +447,14 @@
 
         <!-- ===== MAIN AREA ===== -->
         <main class="main-area">
+            <!-- Update banner (shown when a new version is detected) -->
+            <div class="update-banner" id="update-banner" style="display:none;">
+                <i data-lucide="arrow-up-circle" style="width:14px;height:14px;flex-shrink:0;"></i>
+                <span id="update-banner-text">Nueva versión disponible</span>
+                <a id="update-banner-link" href="#" onclick="return false;" class="update-banner-link">Descargar</a>
+                <button type="button" class="update-banner-close" onclick="document.getElementById('update-banner').style.display='none'" title="Cerrar">✕</button>
+            </div>
+
             <!-- Toolbar -->
             <div class="toolbar">
                 <div class="toolbar-left">
