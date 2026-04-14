@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -23,9 +26,7 @@ jobs:
         run: npm ci
 
       - name: Compilar portable .exe
-        run: npm run electron:portable
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win portable --publish never
 
       - name: Crear Release en GitHub
         uses: softprops/action-gh-release@v2
