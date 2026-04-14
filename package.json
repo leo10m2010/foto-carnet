@@ -1,0 +1,57 @@
+{
+  "name": "foto-carnet-portable",
+  "version": "1.2.0",
+  "description": "Generador de carnets en modo escritorio portable (Electron)",
+  "main": "electron/main.js",
+  "author": "Renato",
+  "license": "UNLICENSED",
+  "scripts": {
+    "electron:start": "electron .",
+    "electron:pack": "electron-builder --dir",
+    "electron:portable": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^26.0.12",
+    "jsbarcode": "^3.12.3",
+    "jspdf": "^4.2.1",
+    "jszip": "^3.10.1",
+    "lucide": "^1.7.0",
+    "xlsx": "^0.18.5"
+  },
+  "build": {
+    "appId": "com.renato.fotocarnet",
+    "productName": "FotoCarnet",
+    "asar": true,
+    "directories": {
+      "output": "dist-electron",
+      "buildResources": "electron/resources"
+    },
+    "files": [
+      "index.html",
+      "app.js",
+      "js/**/*",
+      "styles.css",
+      "test_data.csv",
+      "vendor/**/*",
+      "electron/**/*",
+      "!backup_*/**",
+      "!server.out.log",
+      "!server.err.log"
+    ],
+    "icon": "electron/resources/icon.png",
+    "win": {
+      "icon": "electron/resources/icon.png",
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "FotoCarnet-Portable-${version}.exe"
+    }
+  }
+}

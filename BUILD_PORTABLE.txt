@@ -1,0 +1,26 @@
+PASOS PARA GENERAR EXE PORTABLE OFFLINE (WINDOWS)
+=================================================
+
+1) Instalar dependencias:
+   npm install
+
+2) Probar versión escritorio (sin compilar EXE):
+   npm run electron:start
+
+3) Generar ejecutable portable:
+   npm run electron:portable
+
+4) Resultado:
+   dist-electron\FotoCarnet-Portable-1.0.0.exe
+
+5) Archivo para compartir (solo uno):
+   dist-electron\FotoCarnet-Portable-1.0.0.exe
+
+Notas importantes:
+- Se creó un backup completo antes de estos cambios:
+  backup_20260330_191314
+- La app web original sigue intacta (index.html, app.js, styles.css).
+- Esta versión es offline: usa librerías locales dentro de /vendor.
+- Si quieres EXE con ícono personalizado, coloca:
+  electron\resources\icon.ico
+  y luego vuelve a ejecutar: npm run electron:portable

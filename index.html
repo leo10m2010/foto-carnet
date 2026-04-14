@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador Masivo de Carnets</title>
+    <meta name="description" content="Genera carnets y credenciales en masa a partir de plantillas gráficas, datos CSV/Excel y fotos vinculadas por DNI.">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Offline libraries -->
+    <script src="vendor/lucide/lucide.min.js"></script>
+    <script src="vendor/jsbarcode/JsBarcode.all.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- ===== SIDEBAR ===== -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1><i data-lucide="id-card" style="width:22px;height:22px;vertical-align:-4px;margin-right:6px;"></i>Generador de Carnets</h1>
+                <p class="subtitle">Combinación masiva de datos sobre plantilla</p>
+                <div class="ui-mode-toggle" role="group" aria-label="Modo de edición">
+                    <button type="button" id="btn-mode-simple" class="is-active" onclick="setUIMode('simple')">Simple</button>
+                    <button type="button" id="btn-mode-advanced" onclick="setUIMode('advanced')">Avanzado</button>
+                </div>
+            </div>
+            <div class="sidebar-content">
+
+                <!-- STEP 1: Template -->
+                <div class="config-section" id="section-template">
+                    <div class="section-header" onclick="toggleSection('section-template')">
+                        <div class="step-badge" id="badge-template">1</div>
+                        <h3>Plantilla de Fondo</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="section-body">
+                        <div class="upload-zone" id="zone-template" onclick="document.getElementById('input-template').click()">
+                            <div class="upload-icon"><i data-lucide="image" style="width:32px;height:32px;color:var(--accent-1)"></i></div>
+                            <div class="upload-text">Arrastra o <strong>selecciona</strong> la imagen de plantilla</div>
+                            <div class="file-name" id="template-file-name"></div>
+                            <input type="file" id="input-template" accept="image/*">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2: Photos (PRIMARY DATA SOURCE) -->
+                <div class="config-section" id="section-photos">
+                    <div class="section-header" onclick="toggleSection('section-photos')">
+                        <div class="step-badge" id="badge-photos">2</div>
+                        <h3>Fotos y Datos</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="section-body">
+                        <div class="upload-zone" id="zone-photos" onclick="document.getElementById('input-photos-files').click()">
+                            <div class="upload-icon"><i data-lucide="camera" style="width:32px;height:32px;color:var(--accent-1)"></i></div>
+                            <div class="upload-text">Click para <strong>seleccionar las fotos</strong><br>
+                                <small style="color:var(--text-muted)">Formato: <strong>DNI - APELLIDOS NOMBRES.jpg</strong><br>Ej: 07971267 - CHACON VALDIVIESO JORGE LUIS.jpg</small>
+                            </div>
+                            <div class="file-name" id="photos-file-name"></div>
+                            <input type="file" id="input-photos-files" accept="image/*" multiple style="display:none">
+                        </div>
+                        <div style="display:flex;gap:6px;margin-top:8px;">
+                            <button type="button" class="btn btn-secondary" style="flex:1;font-size:0.75rem;padding:7px 10px;" onclick="document.getElementById('input-photos-files').click()"><i data-lucide="image-plus" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Seleccionar fotos</button>
+                            <button type="button" class="btn btn-secondary" style="flex:1;font-size:0.75rem;padding:7px 10px;" onclick="document.getElementById('input-photos-folder').click()"><i data-lucide="folder-open" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Seleccionar carpeta</button>
+                            <input type="file" id="input-photos-folder" webkitdirectory style="display:none">
+                        </div>
+
+                        <!-- Data stats -->
+                        <div id="data-preview" style="display:none; margin-top: 12px;">
+                            <div class="data-stats">
+                                <div class="stat-chip"><i data-lucide="list" style="width:13px;height:13px;vertical-align:-2px;margin-right:3px;"></i>Registros: <span class="stat-value" id="stat-records">0</span></div>
+                                <div class="stat-chip"><i data-lucide="camera" style="width:13px;height:13px;vertical-align:-2px;margin-right:3px;"></i>Con foto: <span class="stat-value" id="stat-photos">0</span></div>
+                                <div class="stat-chip" id="chip-reniec" style="display:none"><i data-lucide="shield-check" style="width:13px;height:13px;vertical-align:-2px;margin-right:3px;color:#34d399"></i>RENIEC: <span class="stat-value" id="stat-reniec">…</span></div>
+                            </div>
+                            <div class="data-table-wrapper">
+                                <table class="data-table" id="data-table">
+                                    <thead></thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Manual name/apellido editor for current record -->
+                        <div id="record-name-editor" style="display:none; margin-top:12px; border-top:1px dashed rgba(125,211,252,0.18); padding-top:12px;">
+                            <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+                                <i data-lucide="pencil" style="width:13px;height:13px;color:var(--accent-1);flex-shrink:0;"></i>
+                                <span style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;">Editar registro actual</span>
+                            </div>
+                            <div style="display:flex;flex-direction:column;gap:5px;">
+                                <input type="text" id="sidebar-nombres" placeholder="Nombres" autocomplete="off" style="width:100%;box-sizing:border-box;">
+                                <input type="text" id="sidebar-apellidos" placeholder="Apellidos" autocomplete="off" style="width:100%;box-sizing:border-box;">
+                            </div>
+                            <div style="display:flex;gap:6px;margin-top:7px;">
+                                <button type="button" class="btn btn-primary" style="flex:1;font-size:0.73rem;padding:6px 8px;" onclick="commitSidebarNameEdit()"><i data-lucide="check" style="width:12px;height:12px;vertical-align:-2px;margin-right:3px;"></i>Aplicar</button>
+                                <button type="button" class="btn btn-secondary" style="font-size:0.73rem;padding:6px 10px;" onclick="cancelSidebarNameEdit()" title="Revertir cambios">↺</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2b: CSV/Excel (OPTIONAL) -->
+                <div class="config-section collapsed advanced-only" id="section-data">
+                    <div class="section-header" onclick="toggleSection('section-data')">
+                        <div class="step-badge" id="badge-data" style="background:var(--bg-card);border:1px solid var(--border-color);font-size:0.7rem;"><i data-lucide="settings" style="width:12px;height:12px;"></i></div>
+                        <h3>CSV / Excel <small style="font-weight:400;color:var(--text-muted);font-size:0.72rem">— opcional, datos extra</small></h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="section-body">
+                        <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:10px;">Si necesitas campos adicionales (cargo, área, etc.) puedes cargar un CSV/Excel. Se vinculará por DNI con las fotos.</p>
+                        <div class="upload-zone" id="zone-data" onclick="document.getElementById('input-data').click()">
+                            <div class="upload-icon"><i data-lucide="file-spreadsheet" style="width:32px;height:32px;color:var(--accent-1)"></i></div>
+                            <div class="upload-text">Arrastra o <strong>selecciona</strong> un archivo CSV o XLSX</div>
+                            <div class="file-name" id="data-file-name"></div>
+                            <input type="file" id="input-data" accept=".csv,.xlsx,.xls">
+                        </div>
+
+                        <!-- Column mapping -->
+                        <div id="column-mapping" style="display:none; margin-top: 14px;">
+                            <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; display: block;">Mapeo de Columnas</label>
+                            <div class="mapping-grid">
+                                <div class="mapping-item">
+                                    <label>DNI</label>
+                                    <select id="map-dni"></select>
+                                </div>
+                                <div class="mapping-item">
+                                    <label>Cargo / Extra</label>
+                                    <select id="map-extra"></select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 3: Field Positions -->
+                <div class="config-section advanced-only" id="section-fields">
+                    <div class="section-header" onclick="toggleSection('section-fields')">
+                        <div class="step-badge" id="badge-fields">3</div>
+                        <h3>Posición de Campos <small style="font-weight:400;color:var(--text-muted);font-size:0.72rem">— arrastra en vista previa</small></h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="section-body">
+                        <!-- Nombres (first names) -->
+                        <div class="field-config-block" style="margin-bottom:14px;">
+                            <div class="field-label"><i data-lucide="type" style="width:14px;height:14px;vertical-align:-2px;margin-right:5px;color:var(--accent-1);"></i>Nombres</div>
+                            <div class="form-row" style="margin-top:6px;">
+                                <div class="form-group"><label>X</label><input type="number" id="field-nombres-x" value="315" min="0"></div>
+                                <div class="form-group"><label>Y</label><input type="number" id="field-nombres-y" value="670" min="0"></div>
+                                <div class="form-group"><label>Tamaño</label><input type="number" id="field-nombres-size" value="41" min="6" max="120"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Color</label><input type="color" id="field-nombres-color" value="#1a1a2e"></div>
+                                <div class="form-group"><label>Fuente</label>
+                                    <select id="field-nombres-font">
+                                        <option value="Poppins" selected>Poppins</option>
+                                        <option value="Arial">Arial</option>
+                                        <option value="Inter">Inter</option>
+                                        <option value="Helvetica">Helvetica</option>
+                                        <option value="Times New Roman">Times New Roman</option>
+                                        <option value="Verdana">Verdana</option>
+                                    </select>
+                                </div>
+                                <div class="form-group"><label>Alineación</label>
+                                    <select id="field-nombres-align">
+                                        <option value="left">Izquierda</option>
+                                        <option value="center" selected>Centro</option>
+                                        <option value="right">Derecha</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Negrita</label>
+                                    <select id="field-nombres-bold">
+                                        <option value="">Normal</option>
+                                        <option value="bold" selected>Negrita</option>
+                                    </select>
+                                </div>
+                                <div class="form-group"><label>Ancho máx</label><input type="number" id="field-nombres-maxw" value="500" min="50"></div>
+                            </div>
+                        </div>
+
+                        <!-- Apellidos (last names) -->
+                        <div class="field-config-block" style="margin-bottom:14px;">
+                            <div class="field-label"><i data-lucide="type" style="width:14px;height:14px;vertical-align:-2px;margin-right:5px;color:var(--accent-1);"></i>Apellidos</div>
+                            <div class="form-row" style="margin-top:6px;">
+                                <div class="form-group"><label>X</label><input type="number" id="field-apellidos-x" value="315" min="0"></div>
+                                <div class="form-group"><label>Y</label><input type="number" id="field-apellidos-y" value="710" min="0"></div>
+                                <div class="form-group"><label>Tamaño</label><input type="number" id="field-apellidos-size" value="41" min="6" max="120"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Color</label><input type="color" id="field-apellidos-color" value="#1a1a2e"></div>
+                                <div class="form-group"><label>Fuente</label>
+                                    <select id="field-apellidos-font">
+                                        <option value="Poppins" selected>Poppins</option>
+                                        <option value="Arial">Arial</option>
+                                        <option value="Inter">Inter</option>
+                                        <option value="Helvetica">Helvetica</option>
+                                        <option value="Times New Roman">Times New Roman</option>
+                                        <option value="Verdana">Verdana</option>
+                                    </select>
+                                </div>
+                                <div class="form-group"><label>Alineación</label>
+                                    <select id="field-apellidos-align">
+                                        <option value="left">Izquierda</option>
+                                        <option value="center" selected>Centro</option>
+                                        <option value="right">Derecha</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Negrita</label>
+                                    <select id="field-apellidos-bold">
+                                        <option value="">Normal</option>
+                                        <option value="bold" selected>Negrita</option>
+                                    </select>
+                                </div>
+                                <div class="form-group"><label>Ancho máx</label><input type="number" id="field-apellidos-maxw" value="500" min="50"></div>
+                            </div>
+                        </div>
+
+                        <!-- DNI text -->
+                        <div class="field-config-block" style="margin-bottom:14px;">
+                            <div class="field-label"><i data-lucide="fingerprint" style="width:14px;height:14px;vertical-align:-2px;margin-right:5px;color:var(--accent-1);"></i>DNI (texto)</div>
+                            <div class="form-row" style="margin-top:6px;">
+                                <div class="form-group"><label>X</label><input type="number" id="field-dni-x" value="315" min="0"></div>
+                                <div class="form-group"><label>Y</label><input type="number" id="field-dni-y" value="920" min="0"></div>
+                                <div class="form-group"><label>Tamaño</label><input type="number" id="field-dni-size" value="33" min="6" max="72"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Color</label><input type="color" id="field-dni-color" value="#1a1a2e"></div>
+                                <div class="form-group"><label>Fuente</label>
+                                    <select id="field-dni-font">
+                                        <option value="Poppins" selected>Poppins</option>
+                                        <option value="Arial">Arial</option>
+                                        <option value="Inter">Inter</option>
+                                        <option value="Helvetica">Helvetica</option>
+                                    </select>
+                                </div>
+                                <div class="form-group"><label>Alineación</label>
+                                    <select id="field-dni-align">
+                                        <option value="left">Izquierda</option>
+                                        <option value="center" selected>Centro</option>
+                                        <option value="right">Derecha</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Negrita</label>
+                                    <select id="field-dni-bold">
+                                        <option value="">Normal</option>
+                                        <option value="bold" selected>Negrita</option>
+                                    </select>
+                                </div>
+                                <div class="form-group"><label>Prefijo</label><input type="text" id="field-dni-prefix" value="DNI "></div>
+                                <div class="form-group"><label>Ancho máx</label><input type="number" id="field-dni-maxw" value="400" min="50"></div>
+                            </div>
+                        </div>
+
+                        <!-- Extra / Cargo Field -->
+                        <div class="field-config-block" style="margin-bottom:14px;">
+                            <div class="field-label"><i data-lucide="badge-check" style="width:14px;height:14px;vertical-align:-2px;margin-right:5px;color:var(--accent-1);"></i>Cargo / Extra</div>
+                            <div class="form-row" style="margin-top:6px;">
+                                <div class="form-group"><label>X</label><input type="number" id="field-extra-x" value="315" min="0"></div>
+                                <div class="form-group"><label>Y</label><input type="number" id="field-extra-y" value="760" min="0"></div>
+                                <div class="form-group"><label>Tamaño</label><input type="number" id="field-extra-size" value="20" min="6" max="72"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Color</label><input type="color" id="field-extra-color" value="#0e8a6e"></div>
+                                <div class="form-group"><label>Fuente</label>
+                                    <select id="field-extra-font">
+                                        <option value="Poppins" selected>Poppins</option>
+                                        <option value="Arial">Arial</option>
+                                        <option value="Inter">Inter</option>
+                                        <option value="Helvetica">Helvetica</option>
+                                    </select>
+                                </div>
+                                <div class="form-group"><label>Alineación</label>
+                                    <select id="field-extra-align">
+                                        <option value="left">Izquierda</option>
+                                        <option value="center" selected>Centro</option>
+                                        <option value="right">Derecha</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Negrita</label>
+                                    <select id="field-extra-bold">
+                                        <option value="">Normal</option>
+                                        <option value="bold" selected>Negrita</option>
+                                    </select>
+                                </div>
+                                <div class="form-group"><label>Ancho máx</label><input type="number" id="field-extra-maxw" value="500" min="50"></div>
+                            </div>
+                        </div>
+
+                        <!-- Photo position -->
+                        <div class="field-config-block" style="margin-bottom:14px;">
+                            <div class="field-label">
+                                <span><i data-lucide="user-circle" style="width:14px;height:14px;vertical-align:-2px;margin-right:5px;color:var(--accent-1);"></i>Foto</span>
+                            </div>
+                            <input type="checkbox" id="photo-individual-mode" class="photo-individual-hidden">
+                            <div class="photo-quick-tip">Tip: selecciona la foto en el preview para editarla rápido (estilo Canva).</div>
+                            <div class="form-row" style="margin-top:6px;">
+                                <div class="form-group"><label>X</label><input type="number" id="field-photo-x" value="115" min="0"></div>
+                                <div class="form-group"><label>Y</label><input type="number" id="field-photo-y" value="260" min="0"></div>
+                                <div class="form-group"><label>Ancho</label><input type="number" id="field-photo-w" value="400" min="20"></div>
+                                <div class="form-group"><label>Alto</label><input type="number" id="field-photo-h" value="370" min="20"></div>
+                            </div>
+                            <details class="photo-advanced advanced-only">
+                                <summary>Ajustes avanzados de foto</summary>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Ajuste de foto</label>
+                                        <select id="field-photo-fit">
+                                            <option value="cover" selected>Rellenar sin deformar</option>
+                                            <option value="contain">Encajar completa</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group"><label>Zoom foto</label><input type="number" id="field-photo-scale" value="1.00" min="0.20" max="5.00" step="0.05"></div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group"><label>Despl. X</label><input type="number" id="field-photo-offset-x" value="0" step="1"></div>
+                                    <div class="form-group"><label>Despl. Y</label><input type="number" id="field-photo-offset-y" value="0" step="1"></div>
+                                </div>
+                                <div class="form-row" style="align-items:flex-end;">
+                                    <div class="form-group">
+                                        <label style="text-transform:none;letter-spacing:normal;display:flex;align-items:center;gap:6px;">
+                                            <input type="checkbox" id="field-photo-bg-enable" style="width:auto;margin:0;"> Fondo detrás de foto
+                                        </label>
+                                    </div>
+                                    <div class="form-group"><label>Color Fondo</label><input type="color" id="field-photo-bg-color" value="#d9dee8"></div>
+                                    <div class="form-group"><button type="button" class="btn btn-secondary" style="width:100%;padding:8px 10px;font-size:0.74rem;" onclick="autoPickPhotoBgColor()">Auto color</button></div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group"><label>Rotación (°)</label><input type="number" id="field-photo-rotation" value="0" step="90" min="-360" max="360"></div>
+                                </div>
+                            </details>
+                        </div>
+
+                        <!-- Barcode position -->
+                        <div class="field-config-block">
+                            <div class="field-label"><i data-lucide="scan-barcode" style="width:14px;height:14px;vertical-align:-2px;margin-right:5px;color:var(--accent-1);"></i>Código de Barras</div>
+                            <div class="form-row" style="margin-top:6px;">
+                                <div class="form-group" style="display:none"><label>X</label><input type="number" id="field-barcode-x" value="180" min="0"></div>
+                                <div class="form-group"><label>Y</label><input type="number" id="field-barcode-y" value="820" min="0"></div>
+                                <div class="form-group"><label>Ancho</label><input type="number" id="field-barcode-w" value="356" min="40"></div>
+                                <div class="form-group"><label>Alto</label><input type="number" id="field-barcode-h" value="98" min="20"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Formato</label>
+                                    <select id="field-barcode-format">
+                                        <option value="CODE128" selected>CODE128</option>
+                                        <option value="CODE39">CODE39</option>
+                                        <option value="EAN13">EAN13</option>
+                                        <option value="ITF14">ITF14</option>
+                                    </select>
+                                </div>
+                                <div class="form-group"><label>Mostrar texto</label>
+                                    <select id="field-barcode-showtext">
+                                        <option value="true">Sí</option>
+                                        <option value="false" selected>No</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- STEP 4: PDF Options -->
+                <div class="config-section collapsed" id="section-pdf">
+                    <div class="section-header" onclick="toggleSection('section-pdf')">
+                        <div class="step-badge" id="badge-pdf">4</div>
+                        <h3>Opciones de Exportación</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="section-body">
+                        <div class="form-row">
+                            <div class="form-group"><label>Ancho PDF (cm)</label><input type="number" id="pdf-width-cm" value="5.4" step="0.1" min="1"></div>
+                            <div class="form-group"><label>Alto PDF (cm)</label><input type="number" id="pdf-height-cm" value="8.5" step="0.1" min="1"></div>
+                        </div>
+                        <div class="form-row advanced-only">
+                            <div class="form-group">
+                                <label>Orientación de Hoja PDF</label>
+                                <select id="pdf-orientation">
+                                    <option value="portrait" selected>Vertical</option>
+                                    <option value="landscape">Horizontal</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Tamaño de Hoja</label>
+                                <select id="pdf-page-size">
+                                    <option value="a4" selected>A4</option>
+                                    <option value="a3">A3</option>
+                                    <option value="a2">A2</option>
+                                    <option value="a5">A5</option>
+                                    <option value="letter">Carta (Letter)</option>
+                                    <option value="legal">Legal</option>
+                                    <option value="tabloid">Tabloide</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row advanced-only">
+                            <div class="form-group">
+                                <label>Margen (mm)</label>
+                                <input type="number" id="pdf-margin" value="10" min="0" max="50">
+                            </div>
+                            <div class="form-group">
+                                <label>Espacio entre carnets (mm)</label>
+                                <input type="number" id="pdf-gap" value="5" min="0" max="30">
+                            </div>
+                            <div class="form-group">
+                                <label>Marca de corte (mm)</label>
+                                <input type="number" id="pdf-cut-length" value="3" min="1" max="12" step="0.5">
+                            </div>
+                        </div>
+                        <div class="form-row advanced-only">
+                            <div class="form-group" style="max-width:none;">
+                                <label style="text-transform:none;letter-spacing:normal;display:flex;align-items:center;gap:6px;">
+                                    <input type="checkbox" id="pdf-cut-guides" checked style="width:auto;margin:0;">
+                                    Mostrar líneas guía para corte
+                                </label>
+                                <small style="color:var(--text-muted)">Dibuja borde y marcas en esquinas alrededor de cada carnet.</small>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Resolución de Exportación</label>
+                                <select id="export-dpi">
+                                    <option value="300" selected>Alta (300 DPI)</option>
+                                    <option value="450">Muy alta (450 DPI)</option>
+                                    <option value="600">Máxima (600 DPI)</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="max-width:none;">
+                                <small style="color:var(--text-muted);display:block;margin-top:22px;">ZIP individual usará el tamaño del carnet configurado (por defecto 5.4 × 8.5 cm) y lo exportará en PNG sin pérdida.</small>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group" style="max-width:none;">
+                                <button type="button" class="btn btn-secondary" style="width:100%;" onclick="runPreflightCheck()"><i data-lucide="shield-check" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Pre-chequeo antes de exportar</button>
+                            </div>
+                        </div>
+                        <div class="preflight-report" id="preflight-report" style="display:none;"></div>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- ===== MAIN AREA ===== -->
+        <main class="main-area">
+            <!-- Toolbar -->
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <div class="nav-controls">
+                        <button class="nav-btn" id="btn-prev" onclick="navigateRecord(-1)" disabled title="Anterior"><i data-lucide="chevron-left" style="width:16px;height:16px;"></i></button>
+                        <div class="nav-info"><span id="current-index">0</span> / <span id="total-records">0</span></div>
+                        <button class="nav-btn" id="btn-next" onclick="navigateRecord(1)" disabled title="Siguiente"><i data-lucide="chevron-right" style="width:16px;height:16px;"></i></button>
+                    </div>
+                    <div class="zoom-controls">
+                        <button class="nav-btn" onclick="changeZoom(-0.1)" title="Alejar"><i data-lucide="minus" style="width:14px;height:14px;"></i></button>
+                        <span class="zoom-level" id="zoom-level">100%</span>
+                        <button class="nav-btn" onclick="changeZoom(0.1)" title="Acercar"><i data-lucide="plus" style="width:14px;height:14px;"></i></button>
+                        <button class="nav-btn" onclick="resetZoom()" title="Restablecer"><i data-lucide="rotate-ccw" style="width:14px;height:14px;"></i></button>
+                    </div>
+                    <div class="history-controls">
+                        <button class="nav-btn" id="btn-undo" onclick="undoEdit()" disabled title="Deshacer (Ctrl+Z)"><i data-lucide="undo-2" style="width:14px;height:14px;"></i></button>
+                        <button class="nav-btn" id="btn-redo" onclick="redoEdit()" disabled title="Rehacer (Ctrl+Y)"><i data-lucide="redo-2" style="width:14px;height:14px;"></i></button>
+                    </div>
+                </div>
+                <div class="toolbar-right">
+                    <button class="btn btn-secondary" id="btn-export-png" onclick="exportPNG()" disabled><i data-lucide="image-down" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>PNG</button>
+                    <button class="btn btn-secondary" id="btn-export-zip" onclick="exportAllZIP()" disabled><i data-lucide="archive" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>ZIP Individual</button>
+                    <button class="btn btn-primary" id="btn-export-pdf" onclick="exportPDF()" disabled><i data-lucide="file-text" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Exportar PDF</button>
+                    <button class="btn btn-success" id="btn-print" onclick="printAll()" disabled><i data-lucide="printer" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Imprimir</button>
+                    <div class="toolbar-divider"></div>
+                    <button class="btn btn-danger" id="btn-clear" onclick="clearAll()" title="Eliminar todos los datos y empezar de cero"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Limpiar</button>
+                </div>
+            </div>
+
+            <!-- Preview -->
+            <div class="preview-area" id="preview-area">
+                <div class="preview-placeholder" id="preview-placeholder">
+                    <div class="placeholder-icon"><i data-lucide="id-card" style="width:48px;height:48px;color:var(--accent-1);"></i></div>
+                    <h2>Vista Previa del Carnet</h2>
+                    <p>Sigue los pasos del panel izquierdo para comenzar a generar carnets.</p>
+                    <ul class="steps-list">
+                        <li><span class="step-num">1</span> Carga la imagen de plantilla</li>
+                        <li><span class="step-num">2</span> Sube las fotos (DNI - APELLIDOS NOMBRES.jpg)</li>
+                        <li><span class="step-num">3</span> Arrastra elementos y usa flechas para moverlos</li>
+                        <li><span class="step-num">4</span> Navega, exporta o imprime</li>
+                    </ul>
+                </div>
+                <canvas id="carnet-canvas" style="display:none;"></canvas>
+                <div class="editor-hud" id="editor-hud" aria-live="polite">
+                    <!-- Header -->
+                    <div class="editor-hud-top">
+                        <div class="editor-hud-top-left">
+                            <strong id="editor-hud-name">Sin selección</strong>
+                            <span id="editor-hud-details">Haz clic sobre un elemento para editar</span>
+                        </div>
+                        <button type="button" class="hud-close-btn" onclick="state.drag.selectedId = null; tryRender(); updateEditorHud();" title="Deseleccionar (Esc)">✕</button>
+                    </div>
+
+                    <!-- Crop mode: collapses HUD to minimal indicator -->
+                    <div class="editor-hud-crop-overlay" id="editor-hud-crop-overlay">
+                        <i data-lucide="move" class="hud-hero-icon"></i>
+                        <span>Arrastra la foto para reencuadrar</span>
+                        <button type="button" onclick="setPhotoCropMode(false)">✓ Listo</button>
+                    </div>
+
+                    <!-- Position / align actions -->
+                    <div class="editor-hud-actions">
+                        <span class="hud-section-label"><i data-lucide="move" class="hud-section-icon"></i>Posición</span>
+                        <div class="hud-actions-row">
+                            <div class="hud-seg">
+                                <button type="button" onclick="alignSelectedElement('x')" disabled title="Centrar horizontalmente (X)">⊕ X</button>
+                                <button type="button" onclick="alignSelectedElement('y')" disabled title="Centrar verticalmente (Y)">⊕ Y</button>
+                            </div>
+                            <button type="button" class="hud-text-btn" onclick="resetSelectedElement()" disabled title="Restablecer valores originales (R)">
+                                <i data-lucide="rotate-ccw" class="hud-hero-icon"></i>
+                                Restablecer
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Photo-specific controls -->
+                    <div class="editor-hud-photo" id="editor-hud-photo">
+                        <!-- Individual mode active banner -->
+                        <div class="editor-hud-individual-overlay" id="editor-hud-individual-overlay">
+                            <i data-lucide="user-check" class="hud-hero-icon"></i>
+                            <span>Solo este registro</span>
+                            <button type="button" onclick="togglePhotoIndividualFromHud(false)">✕ Desactivar</button>
+                        </div>
+
+                        <!-- Individual toggle -->
+                        <label class="hud-hero-toggle" title="Ajuste individual para este registro (I)">
+                            <input type="checkbox" id="hud-photo-individual" onchange="togglePhotoIndividualFromHud(this.checked)" disabled>
+                            <i data-lucide="user-check" class="hud-hero-icon"></i>
+                            Ajuste individual
+                            <span class="hud-individual-badge">●</span>
+                        </label>
+
+                        <!-- Fondo section -->
+                        <div class="hud-section">
+                            <span class="hud-section-label"><i data-lucide="droplets" class="hud-section-icon"></i>Fondo</span>
+                            <div class="hud-bg-row">
+                                <button type="button" class="hud-hero-btn" id="hud-gotero-btn" onclick="startPhotoColorPick()" disabled title="Tomar color de fondo desde la foto (G)">
+                                    <i data-lucide="pipette" class="hud-hero-icon"></i>
+                                    Gotero
+                                </button>
+                                <button type="button" class="hud-auto-pill" onclick="autoPickPhotoBgColor()" disabled title="Detectar color de fondo automáticamente">Auto</button>
+                                <label class="hud-fondo-toggle" title="Activar fondo de color">
+                                    <input type="checkbox" id="hud-photo-bg-enable" onchange="togglePhotoBgFromHud(this.checked)" disabled>
+                                    Fondo
+                                </label>
+                                <input type="color" id="hud-photo-bg-color" class="hud-bg-color" value="#d9dee8" onchange="setPhotoBgColor(this.value)" title="Color de fondo" disabled>
+                            </div>
+                            <div class="editor-hud-swatches" id="editor-hud-swatches"></div>
+                        </div>
+
+                        <!-- Encuadre section -->
+                        <div class="hud-section">
+                            <span class="hud-section-label"><i data-lucide="frame" class="hud-section-icon"></i>Encuadre</span>
+                            <div class="hud-encuadre-row">
+                                <div class="hud-seg">
+                                    <button type="button" id="hud-fit-cover" onclick="setPhotoFitMode('cover')" disabled title="Rellenar el marco completo">Rellenar</button>
+                                    <button type="button" id="hud-fit-contain" onclick="setPhotoFitMode('contain')" disabled title="Encajar sin recortar">Encajar</button>
+                                </div>
+                                <button type="button" id="hud-crop-mode" onclick="togglePhotoCropMode()" disabled title="Mover la foto dentro del marco (C)" class="hud-text-btn">
+                                    <i data-lucide="crop" class="hud-hero-icon"></i>
+                                    Mover
+                                </button>
+                                <button type="button" onclick="autoFrameCurrentPhoto()" disabled title="Detectar y centrar rostro" class="hud-icon-btn">
+                                    <i data-lucide="scan-face" class="hud-hero-icon"></i>
+                                </button>
+                                <button type="button" onclick="resetSelectedPhotoCrop()" disabled title="Restablecer encuadre" class="hud-icon-btn">
+                                    <i data-lucide="rotate-ccw" class="hud-hero-icon"></i>
+                                </button>
+                            </div>
+                            <!-- Zoom slider -->
+                            <div class="hud-slider-row">
+                                <span class="hud-slider-label">Zoom</span>
+                                <input type="range" id="hud-photo-zoom" min="0.20" max="5.00" step="0.05" value="1.00" oninput="setSelectedPhotoZoom(this.value)" disabled>
+                                <strong id="hud-photo-zoom-value" class="hud-slider-value hud-value-pill">1.00×</strong>
+                            </div>
+                            <!-- Rotation slider -->
+                            <div class="hud-slider-row">
+                                <span class="hud-slider-label">Ángulo</span>
+                                <button type="button" id="hud-rotate-ccw" onclick="rotatePhoto(-90)" disabled title="−90° (Alt+[)" class="hud-slider-step-btn">↺</button>
+                                <input type="range" id="hud-photo-rotation" min="-180" max="180" step="1" value="0" oninput="setSelectedPhotoRotation(this.value)" disabled title="[ ] ±90° · { } ±1° · Alt+[ ] ±45°">
+                                <button type="button" id="hud-rotate-cw" onclick="rotatePhoto(90)" disabled title="+90° (Alt+])" class="hud-slider-step-btn">↻</button>
+                                <strong id="hud-rotation-value" class="hud-slider-value hud-value-pill">0°</strong>
+                                <button type="button" id="hud-rotate-reset" onclick="rotatePhoto(0, true)" disabled title="Restablecer ángulo" class="hud-icon-btn hud-icon-btn--xs">✕</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Shortcuts bar -->
+                    <div class="editor-hud-shortcuts">
+                        <kbd>X</kbd><kbd>Y</kbd> centrar
+                        <kbd>R</kbd> reset
+                        <kbd>I</kbd> individual
+                        <kbd>G</kbd> gotero
+                        <kbd>C</kbd> mover foto
+                        <kbd>[</kbd><kbd>]</kbd> ±90°
+                        <kbd>{</kbd><kbd>}</kbd> ±1°
+                        <kbd>←→</kbd> mover
+                        <kbd>Ctrl+Z</kbd> deshacer
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filmstrip Navigator -->
+            <div class="filmstrip-bar" id="filmstrip-bar">
+                <div class="filmstrip-handle" onclick="toggleFilmstrip()">
+                    <i data-lucide="gallery-horizontal" style="width:13px;height:13px;vertical-align:-2px;margin-right:5px;flex-shrink:0;"></i>
+                    <span>Tira de fotos</span>
+                    <span class="filmstrip-count" id="filmstrip-count"></span>
+                    <span class="filmstrip-arrow" id="filmstrip-arrow">▲</span>
+                </div>
+                <div class="filmstrip-container" id="filmstrip-container">
+                    <div class="filmstrip-track" id="filmstrip-track"></div>
+                </div>
+            </div>
+
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <div class="status-left">
+                    <div class="status-indicator">
+                        <div class="status-dot" id="status-dot"></div>
+                        <span id="status-text">Sin datos cargados</span>
+                    </div>
+                </div>
+                <div>
+                    <span id="status-template">Plantilla: —</span> &nbsp;|&nbsp;
+                    <span id="status-dimensions">—</span> &nbsp;|&nbsp;
+                    <span>Creado por Renato Espinoza | Oficina de Comunicación e Imagen Institucional <span style="color:#ef4444;">&#10084;</span></span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading Modal -->
+    <div class="modal-overlay" id="modal-loading">
+        <div class="modal-content">
+            <div class="spinner"></div>
+            <h3 id="modal-title">Generando PDF...</h3>
+            <p id="modal-text">Procesando carnet 0 de 0</p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <button type="button" class="btn btn-secondary modal-cancel-btn" id="modal-cancel-btn" onclick="cancelCurrentJob()" style="display:none;margin-top:12px;">Cancelar exportación</button>
+        </div>
+    </div>
+
+    <!-- Toast container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- App modules — load order matters: state first, init last -->
+    <script src="js/state.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/session.js"></script>
+    <script src="js/history.js"></script>
+    <script src="js/reniec.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/files.js"></script>
+    <script src="js/render.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js/filmstrip.js"></script>
+    <script src="js/interaction.js"></script>
+    <script src="js/export.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/init.js"></script>
+    <script>
+        // Initialize Lucide icons after DOM loads
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        });
+    </script>
+</body>
+</html>

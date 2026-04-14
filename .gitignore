@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist-electron/
+
+# Logs
+server.out.log
+server.err.log
+*.log
+
+# Backups locales
+backup_*/
+
+# Claude Code session data
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
