@@ -782,7 +782,14 @@ function resetSelectedElement() {
     });
 
     if (id === 'photo') {
+        // If in global mode, clear any per-record override so the reset takes effect
+        const isIndividual = !!document.getElementById('photo-individual-mode')?.checked;
+        if (!isIndividual && state.records.length) {
+            const record = state.records[state.currentIndex];
+            if (record) delete state.photoOverrides[getRecordKey(record)];
+        }
         savePhotoConfigFromDOM();
+        syncHudPhotoControls(getPhotoConfig());
     }
 
     tryRender();
