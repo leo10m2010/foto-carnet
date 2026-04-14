@@ -112,6 +112,11 @@ ipcMain.handle('read-file-as-dataurl', (_event, filePath) => {
   }
 });
 
+ipcMain.on('check-for-updates', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win) checkForUpdates(win);
+});
+
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null);
   createMainWindow();

@@ -14,6 +14,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupUpdateBanner();
 });
 
+function manualCheckForUpdates() {
+    if (!window.electronAPI?.checkForUpdates) return;
+    const btn = document.getElementById('btn-check-updates');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i data-lucide="refresh-cw" style="width:11px;height:11px;vertical-align:-1px;margin-right:3px;"></i>Buscando…';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+    window.electronAPI.checkForUpdates();
+    setTimeout(() => {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="refresh-cw" style="width:11px;height:11px;vertical-align:-1px;margin-right:3px;"></i>Buscar actualizaciones';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    }, 5000);
+}
+
 function setupUpdateBanner() {
     if (!window.electronAPI?.onUpdateAvailable) return;
     window.electronAPI.onUpdateAvailable(({ version, url }) => {
