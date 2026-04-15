@@ -253,7 +253,7 @@ body::after {
 }
 
 .section-body {
-  padding: 0 18px 16px;
+  padding: 14px 18px 16px;
   overflow: hidden;
   transition: max-height var(--transition-slow), padding var(--transition-slow), opacity var(--transition-normal);
   max-height: 2000px;
