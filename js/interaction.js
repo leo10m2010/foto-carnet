@@ -84,6 +84,25 @@ function onCanvasWheel(e) {
     e.preventDefault();
     if (!selectedIsPhoto) state.drag.selectedId = 'photo';
 
+    if (e.altKey) {
+        // Alt + rueda = rotar · Alt + Shift + rueda = rotar más rápido (5°)
+        const step = e.shiftKey ? 5 : 1;
+        const delta = e.deltaY < 0 ? step : -step;
+        const input = document.getElementById('field-photo-rotation');
+        if (!input) return;
+        const now = Date.now();
+        if (now > (state.history.rotationSessionUntil || 0)) {
+            pushUndoSnapshot('photo-rotate');
+            state.history.rotationSessionUntil = now + 500;
+        }
+        let next = toFloat(input.value, 0) + delta;
+        if (next > 180) next -= 360;
+        if (next < -180) next += 360;
+        input.value = next.toFixed(1);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+    }
+
     const step = e.shiftKey ? 0.09 : 0.05;
     const delta = e.deltaY < 0 ? step : -step;
     const current = toFloat(document.getElementById('field-photo-scale')?.value, 1);
@@ -534,7 +553,7 @@ function drawSelectionOverlay() {
         ctx.fillText(label, lbX + 7, lbY + lbH / 2);
 
         if (isSelected && hb.id === 'photo') {
-            const hint = 'Arrastrar: encuadrar · Rueda: zoom · Alt+arrastrar: mover marco · Doble clic: auto-encuadre';
+            const hint = 'Arrastrar: encuadrar · Rueda: zoom · Alt+rueda: girar · Alt+arrastrar: mover marco · Doble clic: auto-encuadre';
             ctx.font = '600 11px Inter, Arial';
             const hintW = ctx.measureText(hint).width + 12;
             const hintH = 18;

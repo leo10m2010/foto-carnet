@@ -297,35 +297,5 @@ function setupKeyboardShortcuts() {
             return;
         }
 
-        if (e.key === '[' && !e.shiftKey && !e.altKey) {
-            e.preventDefault();
-            rotatePhoto(-90);
-            return;
-        }
-        if (e.key === ']' && !e.shiftKey && !e.altKey) {
-            e.preventDefault();
-            rotatePhoto(90);
-            return;
-        }
-        if (e.key === '{') {   // Shift+[
-            e.preventDefault();
-            rotatePhoto(-1);
-            return;
-        }
-        if (e.key === '}') {   // Shift+]
-            e.preventDefault();
-            rotatePhoto(1);
-            return;
-        }
-        if (e.key === '[' && e.altKey) {
-            e.preventDefault();
-            rotatePhoto(-45);
-            return;
-        }
-        if (e.key === ']' && e.altKey) {
-            e.preventDefault();
-            rotatePhoto(45);
-            return;
-        }
     });
 }
