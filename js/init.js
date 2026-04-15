@@ -17,19 +17,39 @@ document.addEventListener('DOMContentLoaded', async () => {
 function manualCheckForUpdates() {
     if (!window.electronAPI?.checkForUpdates) return;
     const btn = document.getElementById('btn-check-updates');
+    const banner = document.getElementById('update-banner');
+    const bannerAlreadyVisible = banner?.style.display !== 'none';
+
+    function resetBtn() {
+        if (!btn) return;
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="refresh-cw" style="width:11px;height:11px;vertical-align:-1px;margin-right:3px;"></i>Buscar actualizaciones';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
     if (btn) {
         btn.disabled = true;
         btn.innerHTML = '<i data-lucide="refresh-cw" style="width:11px;height:11px;vertical-align:-1px;margin-right:3px;"></i>Buscando…';
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
-    window.electronAPI.checkForUpdates();
-    setTimeout(() => {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = '<i data-lucide="refresh-cw" style="width:11px;height:11px;vertical-align:-1px;margin-right:3px;"></i>Buscar actualizaciones';
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        }
-    }, 5000);
+
+    const result = window.electronAPI.checkForUpdates();
+
+    if (result && typeof result.then === 'function') {
+        // Tauri: Promise-based, resolves with true/false
+        result.then(found => {
+            resetBtn();
+            if (!found && !bannerAlreadyVisible) showToast('Ya tienes la última versión instalada ✓', 'success');
+        }).catch(resetBtn);
+    } else {
+        // Electron: fire-and-forget via IPC; check banner state after timeout
+        setTimeout(() => {
+            resetBtn();
+            if (banner?.style.display === 'none' && !bannerAlreadyVisible) {
+                showToast('Ya tienes la última versión instalada ✓', 'success');
+            }
+        }, 5000);
+    }
 }
 
 function setupUpdateBanner() {

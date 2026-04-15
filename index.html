@@ -505,6 +505,7 @@
                             <strong id="editor-hud-name">Sin selección</strong>
                             <span id="editor-hud-details">Haz clic sobre un elemento para editar</span>
                         </div>
+                        <button type="button" class="hud-collapse-btn" id="hud-collapse-btn" onclick="toggleHudCollapse()" title="Expandir / Colapsar controles"><i data-lucide="chevron-up" id="hud-collapse-icon" style="width:13px;height:13px;"></i></button>
                         <button type="button" class="hud-close-btn" onclick="state.drag.selectedId = null; tryRender(); updateEditorHud();" title="Deseleccionar (Esc)">✕</button>
                     </div>
 

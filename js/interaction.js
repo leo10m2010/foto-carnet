@@ -751,6 +751,21 @@ function alignSelectedElement(axis = 'x') {
     showToast(`Elemento centrado en eje ${axis.toUpperCase()}`, 'success');
 }
 
+function _syncCollapseIcon(collapsed) {
+    const icon = document.getElementById('hud-collapse-icon');
+    if (!icon) return;
+    icon.setAttribute('data-lucide', collapsed ? 'chevron-down' : 'chevron-up');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function toggleHudCollapse() {
+    const hud = document.getElementById('editor-hud');
+    if (!hud) return;
+    const collapsed = hud.classList.toggle('hud-collapsed');
+    localStorage.setItem('carnet-hud-collapsed', collapsed ? '1' : '0');
+    _syncCollapseIcon(collapsed);
+}
+
 function resetSelectedElement() {
     const selected = getSelectedHitbox();
     if (!selected) {
@@ -1030,6 +1045,8 @@ function updateEditorHud() {
 
     hud.classList.add('active');
     hud.classList.toggle('crop-mode', state.photoCropMode.active && state.drag.selectedId === 'photo');
+    hud.classList.toggle('hud-collapsed', localStorage.getItem('carnet-hud-collapsed') === '1');
+    _syncCollapseIcon(hud.classList.contains('hud-collapsed'));
 
     const labels = {
         nombres: 'Nombres',
