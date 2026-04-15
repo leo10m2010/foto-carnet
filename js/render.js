@@ -508,8 +508,8 @@ function renderCarnet(index, targetCanvas, exportScale = 1) {
                 });
             }
 
-            if (record.nombres)  drawTextField(ctx, record.nombres,  getFieldConfig('nombres'),  'nombres',  targetCanvas);
-            if (record.apellidos) drawTextField(ctx, record.apellidos, getFieldConfig('apellidos'), 'apellidos', targetCanvas);
+            drawTextField(ctx, record.nombres  || 'SIN NOMBRE',   getFieldConfig('nombres'),   'nombres',   targetCanvas);
+            drawTextField(ctx, record.apellidos || 'SIN APELLIDO', getFieldConfig('apellidos'), 'apellidos', targetCanvas);
             if (record.dni) {
                 const prefix = document.getElementById('field-dni-prefix')?.value || '';
                 drawTextField(ctx, prefix + record.dni, getFieldConfig('dni'), 'dni', targetCanvas);
