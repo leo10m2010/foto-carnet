@@ -1,4 +1,40 @@
-const RENIEC_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InRoZXJlbmF0b2VtQGdtYWlsLmNvbSJ9.CGxlSecmJ6IQP7esT6LtQNwQ64u9q_rOYou0qyXdQt0';
+function getReniecToken() {
+    return localStorage.getItem('reniec-token') ||
+        document.getElementById('field-reniec-token')?.value?.trim() || '';
+}
+
+function updateReniecTokenStatus() {
+    const token = localStorage.getItem('reniec-token') || '';
+    const statusEl = document.getElementById('reniec-token-status');
+    const badgeEl  = document.getElementById('badge-reniec');
+    if (statusEl) {
+        statusEl.textContent = token ? '✓ Configurado' : '';
+    }
+    if (badgeEl) {
+        badgeEl.style.borderColor = token ? '#34d399' : '';
+        badgeEl.style.color       = token ? '#34d399' : '';
+    }
+}
+
+function toggleReniecTokenVisibility() {
+    const input = document.getElementById('field-reniec-token');
+    if (!input) return;
+    const hide = input.type === 'text';
+    input.type = hide ? 'password' : 'text';
+    const icon = document.getElementById('icon-toggle-token');
+    if (icon) {
+        icon.setAttribute('data-lucide', hide ? 'eye' : 'eye-off');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+
+function clearReniecToken() {
+    localStorage.removeItem('reniec-token');
+    const input = document.getElementById('field-reniec-token');
+    if (input) input.value = '';
+    updateReniecTokenStatus();
+    showToast('Token RENIEC eliminado', 'info');
+}
 
 async function enrichWithRENIEC() {
     // Capture the generation token at the moment this query starts.
@@ -31,13 +67,18 @@ async function enrichWithRENIEC() {
         try {
             let json;
 
+            const token = getReniecToken();
+            if (!token) {
+                throw new Error('Configura tu token RENIEC en la sección de ajustes.');
+            }
+
             if (window.electronAPI?.queryRENIEC) {
-                const result = await window.electronAPI.queryRENIEC(dni, RENIEC_TOKEN);
+                const result = await window.electronAPI.queryRENIEC(dni, token);
                 if (!result.ok) throw new Error(result.error);
                 json = result.body;
             } else {
                 const resp = await fetch(
-                    `https://dniruc.apisperu.com/api/v1/dni/${dni}?token=${RENIEC_TOKEN}`
+                    `https://dniruc.apisperu.com/api/v1/dni/${dni}?token=${token}`
                 );
                 json = await resp.json();
             }

@@ -96,6 +96,33 @@
                     </div>
                 </div>
 
+                <!-- RENIEC Token -->
+                <div class="config-section collapsed" id="section-reniec">
+                    <div class="section-header" onclick="toggleSection('section-reniec')">
+                        <div class="step-badge" id="badge-reniec" style="background:var(--bg-card);border:1px solid var(--border-color);font-size:0.7rem;"><i data-lucide="shield-check" style="width:12px;height:12px;"></i></div>
+                        <h3>RENIEC <small style="font-weight:400;color:var(--text-muted);font-size:0.72rem">— verificación automática de nombres</small></h3>
+                        <span id="reniec-token-status" style="font-size:0.72rem;font-weight:600;color:#34d399;margin-left:auto;margin-right:8px;"></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="section-body">
+                        <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:10px;">Al cargar fotos con DNI de 8 dígitos, se consulta RENIEC automáticamente para corregir nombres y apellidos.</p>
+                        <div style="position:relative;">
+                            <input type="password" id="field-reniec-token"
+                                placeholder="Pega tu token de apisperu.com"
+                                style="width:100%;box-sizing:border-box;font-size:0.8rem;padding:6px 36px 6px 8px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);"
+                                oninput="localStorage.setItem('reniec-token',this.value.trim());updateReniecTokenStatus()">
+                            <button type="button" onclick="toggleReniecTokenVisibility()"
+                                style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);padding:2px 4px;line-height:1;">
+                                <i data-lucide="eye" id="icon-toggle-token" style="width:14px;height:14px;vertical-align:middle;"></i>
+                            </button>
+                        </div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
+                            <p style="font-size:0.73rem;color:var(--text-muted);margin:0;">Token gratuito en <strong>apisperu.com</strong> — se guarda localmente.</p>
+                            <button type="button" class="btn btn-secondary" onclick="clearReniecToken()" style="font-size:0.72rem;padding:3px 8px;flex-shrink:0;margin-left:8px;">Limpiar</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- STEP 2b: CSV/Excel (OPTIONAL) -->
                 <div class="config-section collapsed advanced-only" id="section-data">
                     <div class="section-header" onclick="toggleSection('section-data')">
